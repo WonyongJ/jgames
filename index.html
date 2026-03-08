@@ -1,24 +1,351 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>jgames - 2P Tetris</title>
-  <meta http-equiv="refresh" content="0; url=./src/tetris_2p.html" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SW Games — 웹 게임 쇼케이스</title>
+  <meta name="description" content="브라우저에서 바로 플레이하는 웹 게임 컬렉션. SW Games 포트폴리오.">
   <style>
-    body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #0d1220;
-      color: #f3f5ff;
+    :root {
+      --bg: #0a0a1a;
+      --surface: #12122a;
+      --card: #1a1a3e;
+      --primary: #6c5ce7;
+      --primary-glow: rgba(108, 92, 231, 0.3);
+      --accent: #00cec9;
+      --text: #e0e0f0;
+      --text-dim: #8888aa;
+      --border: #2a2a5a;
     }
-    a { color: #9ed0ff; }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated background */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(108, 92, 231, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(108, 92, 231, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      z-index: 0;
+    }
+
+    .bg-glow {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.15;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .bg-glow-1 { top: -200px; left: -100px; background: var(--primary); }
+    .bg-glow-2 { bottom: -200px; right: -100px; background: var(--accent); }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header */
+    header {
+      padding: 32px 0 0;
+      text-align: center;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .logo-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 10px;
+      font-size: 1.2rem;
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 80px 0 60px;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--text-dim);
+      max-width: 500px;
+      margin: 0 auto 40px;
+      line-height: 1.6;
+    }
+
+    .hero-badges {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Games Section */
+    .section-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 24px;
+      padding-bottom: 80px;
+    }
+
+    .game-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .game-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--primary);
+      box-shadow: 0 20px 60px var(--primary-glow);
+    }
+
+    .game-card-preview {
+      height: 200px;
+      background: linear-gradient(135deg, var(--surface), var(--card));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-card-preview::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(transparent 60%, var(--card));
+    }
+
+    .game-card-body {
+      padding: 20px 24px 24px;
+    }
+
+    .game-card-body h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .game-card-body p {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .game-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      padding: 4px 10px;
+      background: rgba(108, 92, 231, 0.15);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    .play-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 10px 24px;
+      background: linear-gradient(135deg, var(--primary), #8b7cf7);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .play-btn:hover { opacity: 0.85; }
+
+    /* Coming Soon Card */
+    .game-card.coming-soon {
+      opacity: 0.5;
+      cursor: default;
+    }
+    .game-card.coming-soon:hover {
+      transform: none;
+      border-color: var(--border);
+      box-shadow: none;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    footer a:hover { text-decoration: underline; }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .games-grid {
+        grid-template-columns: 1fr;
+      }
+      .hero { padding: 60px 0 40px; }
+    }
   </style>
 </head>
 <body>
-  <p>이동 중... <a href="./src/tetris_2p.html">게임 열기</a></p>
+  <div class="bg-grid"></div>
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <div class="container">
+    <header>
+      <div class="logo">
+        <span class="logo-icon">🎮</span>
+        SW Games
+      </div>
+    </header>
+
+    <section class="hero">
+      <h1>Play Instantly<br>in Your Browser</h1>
+      <p>프레임워크 없이 순수 웹 기술로 만든 게임 컬렉션. 설치 없이, 브라우저에서 바로 플레이하세요.</p>
+      <div class="hero-badges">
+        <span class="badge"><span class="badge-dot"></span> No Install</span>
+        <span class="badge">HTML5 / JS</span>
+        <span class="badge">Open Source</span>
+      </div>
+    </section>
+
+    <div class="section-title">— Game Collection —</div>
+
+    <div class="games-grid">
+      <!-- 2P Tetris -->
+      <a class="game-card" href="games/tetris_2p.html">
+        <div class="game-card-preview">🧱</div>
+        <div class="game-card-body">
+          <h3>2P Tetris</h3>
+          <p>같은 화면에서 친구와 대결하는 2인용 테트리스. 키보드를 나눠 사용하세요!</p>
+          <div class="game-tags">
+            <span class="tag">2 Players</span>
+            <span class="tag">Puzzle</span>
+            <span class="tag">Multiplayer</span>
+          </div>
+          <button class="play-btn">▶ Play Now</button>
+        </div>
+      </a>
+
+      <!-- Coming Soon -->
+      <div class="game-card coming-soon">
+        <div class="game-card-preview">🚀</div>
+        <div class="game-card-body">
+          <h3>Coming Soon</h3>
+          <p>새로운 게임을 준비하고 있습니다. 기대해 주세요!</p>
+          <div class="game-tags">
+            <span class="tag">TBD</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      &copy; 2026 SW Games &middot; Built with ❤️ by
+      <a href="https://github.com/WonyongJ" target="_blank">WonyongJ</a>
+      &middot;
+      <a href="https://github.com/WonyongJ/jgames" target="_blank">GitHub</a>
+    </div>
+  </footer>
 </body>
 </html>
